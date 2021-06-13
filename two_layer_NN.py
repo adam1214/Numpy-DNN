@@ -152,7 +152,7 @@ def update_parameters(parameters, grads, learning_rate):
 
 if __name__ == "__main__":
     np.random.seed(1)
-    learning_rate = 0.01
+    learning_rate = 0.002
     
     train_feature = []
     train_label = []
@@ -202,22 +202,66 @@ if __name__ == "__main__":
         probs, caches = forwardpass(train_feature_pca.T, parameters)
         predict_labels = np.argmax(probs, axis=0)
         acc = 0
-        for i in range(0, predict_labels.shape[0], 1):
-            if predict_labels[i] == train_label_arr[i]:
+        for a in range(0, predict_labels.shape[0], 1):
+            if predict_labels[a] == train_label_arr[a]:
                 acc += 1
         #print('model acc on training dataset:', acc/predict_labels.shape[0])
         train_acc_list.append(acc/predict_labels.shape[0])
         
         #predict testing data
         probs, caches = forwardpass(test_feature_pca.T, parameters) #probs:(3, 498)
-        predict_labels = np.argmax(probs, axis=0)
+        predict_test_labels = np.argmax(probs, axis=0)
         acc = 0
-        for i in range(0, predict_labels.shape[0], 1):
-            if predict_labels[i] == test_label[i]:
+        for a in range(0, predict_test_labels.shape[0], 1):
+            if predict_test_labels[a] == test_label[a]:
                 acc += 1
         #print('model acc on testing dataset:', acc/predict_labels.shape[0])
-        test_acc_list.append(acc/predict_labels.shape[0])
+        test_acc_list.append(acc/predict_test_labels.shape[0])
+
+    print('model acc on testing dataset:', acc/predict_test_labels.shape[0])
+    plt.figure()
     plt.plot(np.arange(train_feature_pca.shape[0]), train_acc_list, color = 'r', label="training data acc")
     plt.plot(np.arange(train_feature_pca.shape[0]), test_acc_list, color = 'b', label="testing data acc")
+    plt.legend(loc='lower right')
+    plt.xlabel('Training Iteration')
+    plt.ylabel('Accuracy')
     plt.show()
     #plt.save('train_test_acc.png')
+
+    colors = ('green', 'blue', 'red')
+    cmap = ListedColormap(colors) #上色器
+
+    # feature value boundary
+    x1_min = np.min(test_feature_pca[:, 0])
+    x1_max = np.max(test_feature_pca[:, 0]) + 1
+    x2_min = np.min(test_feature_pca[:, 1])
+    x2_max = np.max(test_feature_pca[:, 1]) + 1
+
+    x1_mesh, x2_mesh = np.meshgrid(np.arange(x1_min, x1_max, 0.01), np.arange(x2_min, x2_max, 0.01))
+    x1_x2_flatten = np.array([x1_mesh.flatten(), x2_mesh.flatten()]).T #(3814834, 2)
+    probs, caches = forwardpass(x1_x2_flatten.T, parameters) #probs:(3, 3814834)
+    predict_labels = np.argmax(probs, axis=0)
+    predict_labels = predict_labels.reshape(x1_mesh.shape)
+    plt.figure()
+    plt.contourf(x1_mesh, x2_mesh, predict_labels, cmap=cmap, alpha=0.5) #三維等高線圖
+    plt.xlim(x1_min, x1_max)
+    plt.ylim(x2_min, x2_max)
+
+    # plot testing data ground true
+    type0 = []
+    type1 = []
+    type2 = []
+    for i in range(0, test_feature_pca.shape[0], 1):
+        if test_label[i] == 0:
+            type0.append(test_feature_pca[i])
+        elif test_label[i] == 1:
+            type1.append(test_feature_pca[i])
+        elif test_label[i] == 2:
+            type2.append(test_feature_pca[i])
+    type0_arr = np.array(type0)
+    type1_arr = np.array(type1)
+    type2_arr = np.array(type2)
+    plt.scatter(x=type0_arr[:, 0], y=type0_arr[:, 1], c=colors[0])
+    plt.scatter(x=type1_arr[:, 0], y=type1_arr[:, 1], c=colors[1])
+    plt.scatter(x=type2_arr[:, 0], y=type2_arr[:, 1], c=colors[2])
+    plt.show()
