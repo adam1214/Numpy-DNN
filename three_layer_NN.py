@@ -28,11 +28,12 @@ def load_feature_label(train_or_test, feature_list, label_list):
             else:
                 label_list.append([0,0,1])
 
-def initialize_parameters(n_x, n_h, n_y):
+def initialize_parameters(n_x, n_h1, n_h2, n_y):
     """
     Argument:
     n_x -- size of the input layer
-    n_h -- size of the hidden layer
+    n_h1 -- size of the hidden layer 1
+    n_h2 -- size of the hidden layer 2
     n_y -- size of the output layer
     
     Returns:
@@ -42,12 +43,14 @@ def initialize_parameters(n_x, n_h, n_y):
                     W2 -- weight matrix of shape (n_y, n_h)
                     b2 -- bias vector of shape (n_y, 1)
     """
-    W1 = np.random.randn(n_h, n_x)
-    b1 = np.zeros([n_h, 1])
-    W2 = np.random.randn(n_y, n_h)
-    b2 = np.zeros([n_y, 1])
+    W1 = np.random.randn(n_h1, n_x)
+    b1 = np.zeros([n_h1, 1])
+    W2 = np.random.randn(n_h2, n_h1)
+    b2 = np.zeros([n_h2, 1])
+    W3 = np.random.randn(n_y, n_h2)
+    b3 = np.zeros([n_y, 1])
     
-    parameters = {"W1": W1, "b1": b1, "W2": W2, "b2": b2}
+    parameters = {"W1": W1, "b1": b1, "W2": W2, "b2": b2, "W3": W3, "b3": b3}
     
     return parameters
 
@@ -62,18 +65,24 @@ def forwardpass(X, parameters):
     cache -- a dictionary containing "Z1", "A1", "Z2" and "A2"
     """
     
-    W1 = parameters["W1"] #(5,2)
-    b1 = parameters["b1"] #(5,1)
-    W2 = parameters["W2"] #(3,5)
-    b2 = parameters["b2"] #(3,1)
+    W1 = parameters["W1"]
+    b1 = parameters["b1"]
+    W2 = parameters["W2"]
+    b2 = parameters["b2"]
+    W3 = parameters["W3"]
+    b3 = parameters["b3"]
     
     Z1 = W1@X + b1
-    A1 = 1/(1+np.exp(-Z1))  #Sigmoid (5,1)
+    A1 = 1/(1+np.exp(-Z1))  #Sigmoid
+
     Z2 = W2@A1 + b2
-    A2 = np.exp(Z2)/np.sum(np.exp(Z2), axis=0)  #Softmax (3,1)
+    A2 = 1/(1+np.exp(-Z2))  #Sigmoid
     
-    cache = {"Z1": Z1, "A1": A1, "Z2": Z2, "A2": A2}
-    return A2, cache
+    Z3 = W3@A2 + b3
+    A3 = np.exp(Z3)/np.sum(np.exp(Z3), axis=0)  #Softmax
+    
+    cache = {"Z1": Z1, "A1": A1, "Z2": Z2, "A2": A2, "Z3": Z3, "A3": A3}
+    return A3, cache
 
 def compute_cost(A2, Y, parameters):
     batch_size = Y.shape[0]   # batch size is 1 when training, because of SGD, Y.shape=(1,3)
@@ -100,23 +109,32 @@ def backwardpass(parameters, cache, X, Y):
     
     W1 = parameters["W1"]
     W2 = parameters["W2"]
+    W3 = parameters["W3"]
     A1 = cache["A1"]
     A2 = cache["A2"]
+    A3 = cache["A3"]
     Z1 = cache["Z1"]
     Z2 = cache["Z2"]
+    Z3 = cache["Z3"]
 
-    dA2 = - np.divide(Y, A2) #(3,1)
-    dZ2 = dA2 * ( (np.exp(Z2)/np.sum(np.exp(Z2))) - (np.exp(2*Z2)/(np.sum(np.exp(Z2)))**2) ) #(3,1)
-    dW2 = (dZ2 @ A1.T)/batch_size #(3,5)
-    db2 = dZ2/batch_size #(3,1)
-    dA1 = W2.T @ dZ2 #(5,1)
+    dA3 = - np.divide(Y, A3) #(3,1)
+    dZ3 = dA3 * ( (np.exp(Z3)/np.sum(np.exp(Z3))) - (np.exp(2*Z3)/(np.sum(np.exp(Z3)))**2) ) #(3,1)
+    dW3 = (dZ3 @ A2.T)/batch_size #(3,5)
+    db3 = dZ3/batch_size #(3,1)
+    dA2 = W3.T @ dZ3 #(5,1)
+
+    temp_s = 1/(1+np.exp(-Z2))
+    dZ2 = dA2 * temp_s * (1-temp_s) #(5,1)
+    dW2 = (dZ2 @ A1.T)/batch_size #(5,2)
+    db2 = dZ2/batch_size #(5,1)
+    dA1 = W2.T @ dZ2 
 
     temp_s = 1/(1+np.exp(-Z1))
     dZ1 = dA1 * temp_s * (1-temp_s) #(5,1)
     dW1 = (dZ1 @ X.T)/batch_size #(5,2)
     db1 = dZ1/batch_size #(5,1)
     
-    grads = {"dW1": dW1, "db1": db1, "dW2": dW2, "db2": db2}
+    grads = {"dW1": dW1, "db1": db1, "dW2": dW2, "db2": db2, "dW3": dW3, "db3":db3}
     return grads
 
 def update_parameters(parameters, grads, learning_rate):
@@ -135,24 +153,29 @@ def update_parameters(parameters, grads, learning_rate):
     b1 = parameters["b1"]
     W2 = parameters["W2"]
     b2 = parameters["b2"]
+    W3 = parameters["W3"]
+    b3 = parameters["b3"]
     
     dW1 = grads["dW1"]
     db1 = grads["db1"]
     dW2 = grads["dW2"]
     db2 = grads["db2"]
+    dW3 = grads["dW3"]
+    db3 = grads["db3"]
     
     W1 = W1 - learning_rate*dW1
     b1 = b1 - learning_rate*db1
     W2 = W2 - learning_rate*dW2
     b2 = b2 - learning_rate*db2
-    
-    parameters = {"W1": W1, "b1": b1, "W2": W2, "b2": b2}
-    
+    W3 = W3 - learning_rate*dW3
+    b3 = b3 - learning_rate*db3
+
+    parameters = {"W1": W1, "b1": b1, "W2": W2, "b2": b2, "W3": W3, "b3":b3}
     return parameters
 
 if __name__ == "__main__":
     np.random.seed(1)
-    learning_rate = 0.01
+    learning_rate = 0.003
     
     train_feature = []
     train_label = []
@@ -184,16 +207,16 @@ if __name__ == "__main__":
     train_feature_pca = pca.fit_transform(train_feature)    #(1470, 2) np float array
     test_feature_pca = pca.transform(test_feature)   #(498, 2) np float array
 
-    parameters = initialize_parameters(n_x=2, n_h=35, n_y=3)
-    rand_pick_idx = np.arange(train_feature_pca.shape[0]) 
+    parameters = initialize_parameters(n_x=2, n_h1=35, n_h2=35, n_y=3)
+    rand_pick_idx = np.arange(train_feature_pca.shape[0])
     np.random.shuffle(rand_pick_idx) 
     
     train_acc_list = []
     test_acc_list = []
     #training
     for i in range(0, rand_pick_idx.shape[0], 1):
-        A2, cache = forwardpass(train_feature_pca[rand_pick_idx[i]].reshape(2,1), parameters)
-        cost = compute_cost(A2, train_label[rand_pick_idx[i]].reshape(1,3), parameters)
+        A3, cache = forwardpass(train_feature_pca[rand_pick_idx[i]].reshape(2,1), parameters)
+        cost = compute_cost(A3, train_label[rand_pick_idx[i]].reshape(1,3), parameters)
         #print(cost)
         grads = backwardpass(parameters, cache, train_feature_pca[rand_pick_idx[i]].reshape(2,1), train_label[rand_pick_idx[i]].reshape(3,1))
         parameters = update_parameters(parameters, grads, learning_rate)
