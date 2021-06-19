@@ -118,7 +118,8 @@ def backwardpass(parameters, cache, X, Y):
     Z3 = cache["Z3"]
 
     dA3 = - np.divide(Y, A3) #(3,1)
-    dZ3 = dA3 * ( (np.exp(Z3)/np.sum(np.exp(Z3))) - (np.exp(2*Z3)/(np.sum(np.exp(Z3)))**2) ) #(3,1)
+    #dZ3 = dA3 * ( (np.exp(Z3)/np.sum(np.exp(Z3))) - (np.exp(2*Z3)/(np.sum(np.exp(Z3)))**2) ) # only consider i == j, no i != J
+    dZ3 = A3 - Y # ref: https://deepnotes.io/softmax-crossentropy?fbclid=IwAR1KALP-_e5K5B2XVX0wy9q52FItJnICfcD2AxSmWcVOcnUkZyEFLgzypHk#derivative-of-softmax
     dW3 = (dZ3 @ A2.T)/batch_size #(3,5)
     db3 = dZ3/batch_size #(3,1)
     dA2 = W3.T @ dZ3 #(5,1)
@@ -175,7 +176,7 @@ def update_parameters(parameters, grads, learning_rate):
 
 if __name__ == "__main__":
     np.random.seed(1)
-    learning_rate = 0.003
+    learning_rate = 0.005
     
     train_feature = []
     train_label = []
@@ -207,7 +208,7 @@ if __name__ == "__main__":
     train_feature_pca = pca.fit_transform(train_feature)    #(1470, 2) np float array
     test_feature_pca = pca.transform(test_feature)   #(498, 2) np float array
 
-    parameters = initialize_parameters(n_x=2, n_h1=35, n_h2=35, n_y=3)
+    parameters = initialize_parameters(n_x=2, n_h1=70, n_h2=50, n_y=3)
     rand_pick_idx = np.arange(train_feature_pca.shape[0])
     np.random.shuffle(rand_pick_idx) 
     

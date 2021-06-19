@@ -106,7 +106,8 @@ def backwardpass(parameters, cache, X, Y):
     Z2 = cache["Z2"]
 
     dA2 = - np.divide(Y, A2) #(3,1)
-    dZ2 = dA2 * ( (np.exp(Z2)/np.sum(np.exp(Z2))) - (np.exp(2*Z2)/(np.sum(np.exp(Z2)))**2) ) #(3,1)
+    #dZ2 = dA2 * ( (np.exp(Z2)/np.sum(np.exp(Z2))) - (np.exp(2*Z2)/(np.sum(np.exp(Z2)))**2) ) #(3,1) # only consider i == j, no i != J
+    dZ2 = A2 - Y # ref: https://deepnotes.io/softmax-crossentropy?fbclid=IwAR1KALP-_e5K5B2XVX0wy9q52FItJnICfcD2AxSmWcVOcnUkZyEFLgzypHk#derivative-of-softmax
     dW2 = (dZ2 @ A1.T)/batch_size #(3,5)
     db2 = dZ2/batch_size #(3,1)
     dA1 = W2.T @ dZ2 #(5,1)
@@ -152,7 +153,7 @@ def update_parameters(parameters, grads, learning_rate):
 
 if __name__ == "__main__":
     np.random.seed(1)
-    learning_rate = 0.01
+    learning_rate = 0.02
     
     train_feature = []
     train_label = []
